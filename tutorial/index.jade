@@ -1,0 +1,154 @@
+.chapter(data-title='Push Notification Webhook Basics')
+  .step(data-title='Welcome!', data-file='README.md')
+    :markdown
+      ## What Are Webhooks?
+
+      A **Webhook** is an HTTP-based callback that contains event notification data.
+
+      RingCentral Webhooks are a transport type available for developers to use when creating [Push Notifications](https://developers.ringcentral.com/api-docs/latest/index.html#!#RefCreateSubscription).
+
+      This Webhook Basics tutorial will show you the basics about how to create and consume Push Notifications using the **WebHook** transport type in Node.js.
+
+      Developers working with this tutorial can deploy this app to Heroku or operate it locally behind [ngrok](https://ngrok.com/), but you must have a valid SSL certificate chain that supports TLSv1.2, but you must have a valid SSL certificate chain that supports TLSv1.2+.
+
+  .step(data-title='Prerequisites', data-file='README.md' data-hightlight='7-11')
+    :markdown
+      ## Usage Prerequisites
+
+      Please make sure you have access to the following required resources on-hand prior to running this source code locally or via deployment to Heroku
+
+      * Valid RingCentral Account - [Get your free RingCentral Developer Account](https://developers.ringcentral.com/free-tier-sign-up.html)
+      * Ability to login to the [RingCentral Developer Portal](https://developers.ringcentral.com)
+      * Have completed [Getting Started](https://developers.ringcentral.com/library/getting-started.html)
+      * Configured your RingCentral Sandbox User Extension with a direct number
+      * Verified your RingCentral Sandbox User Extension allows presence to be monitored, [learn how to configure presence monitoring](https://success.ringcentral.com/articles/en_US/RC_Knowledge_Article/How-to-choose-specific-user-extensions-to-monitor-for-Presence)
+      * If running on your local development machine, you have Node.js and Git installed
+      * If running using Heroku One-Button Deployment, a valid [Heroku](https://heroku.com) account
+
+      **See Also:**
+      * [Node.js](https://nodejs.org)
+      * [Git](https://git-scm.com/)
+      * [Heroku](https://heroku.com)
+
+  .step(data-file='.env.tmpl', data-highlight='4-11')
+    :markdown
+      ## Environment Configuration
+
+      The first file we'll look at is `.env.tmpl`. This contains configuration data for this tutorial to operate either locally, on Heroku, or on your favorite PaaS. This file acts as a template for you and provides developers with all settings.
+
+      If running locally or not on Heroku, Developers need to rename this file `mv .env.tmpl .env`. Open the file for editing, and fill in these tutorial runtime configuration values:
+
+      * `PORT`: number - defaults to 3000
+      * `RC_APP_NAME`: string - <your_ringcentral_developer_portal_application_name> - reference for developers, not used internally (required on Heroku)
+      * `RC_ENV`: string - [sandbox, production] - tells the application which API endpoint to use - defaults to **sandbox**
+      * `RC_APP_KEY`: string - <your_ringcentral_application_key> - Available from within the RingCentral Developer Portal, also known as **client_id** in OAuth2 nomenclature
+      * `RC_APP_SECRET`: string - <your_ringcentral_application_secret> - Available from within the RingCentral Developer Portal, also known as **client_secret** in OAuth2 nomenclature
+      * `RC_USERNAME`: string - <your_ringcentral_username> - Either phone number or email (depending upon your account settings) and must be an administrative user-level account for either sandbox or production respectively
+      * `RC_PASSWORD`: string - <your_ringcentral_password> - The associated password for the `RC_USERNAME` provided above. Must be an administrative user-level account for either sandbox or production respectively
+      * `RC_EXTENSION`: string - <your_ringcentral_extension> - The extension number as a string, optional
+      * `RC_CACHE_PREFIX`: string - Randomized string for the RingCentral JavaScript SDK, only required if you modify the source otherwise leave empty
+      * `EXTENSIONS_PER_PAGE`: number - Quantity of extensions to fetch per page - defaults to **500**
+
+      Now that we have all preparation work completed, let's take a look at the first file that contains the actual content of the tutorial, `/index.js`.
+
+  .step(data-file='index.js', data-highlight='3-4')
+    :markdown
+      ## Local Environment Variables
+
+      This application uses [dotenv](https://www.npmjs.com/package/dotenv) to simplify loading environment variables on your local system. If you want to bypass this, such as if you deploy to Heroku, then set **RC_ENV** to `production`.
+
+  .step(data-title='Dependencies', data-file='index.js', data-highlight='7-9')
+    :markdown
+      ## Dependencies
+      
+      This demo application uses [Official RingCentral JavaScript SDK](https://github.com/ringcentral.com/ringcentral-js), [Node's http module](https://nodejs.org/api/http.html), and [Node's url module](https://nodejs.org/api/url.html) as dependencies. If running locally, make sure you execute `npm install` after cloning to install these dependencies.
+
+  .step(data-file='index.js', data-highlight='11')
+    :markdown
+      ## Create a Webserver
+
+      We will use Node.js [HTTP module](https://nodejs.org/api/http.html) to create a new web server. We will need to this later to setup our WebHook event handler, more on that later...
+
+  .step(data-file='index.js', data-highlight='13-22')
+    :markdown
+      ## RingCentral JS SDK Setup
+
+      First we will instantiate the SDK, and then we cache the RingCentral Platform object for later reference, and create a placeholder for our subscription.
+
+  .step(data-file='index.js', data-highlight='25-38')
+    :markdown
+      ## Login to RingCentral
+
+      Next we use the RingCentral Platform object's `login()` method to authentiate using OAuth2 Password Flow to obtain a valid `access_token`. In multi-tenant, or SaaS applications you would want to use **Authorization Flow** (aka: 3-Legged OAuth).
+
+      If we are successful in authenticating, the application code's **init** method is called to start the app.
+
+  .step(data-file='index.js', data-highlight='194-222')
+    :markdown
+      ## Platform Events
+
+      Instead of calling the **init** method directly in the Promise as shown in the previous step, we also could have leveraged the RingCentral Platform Events and inserted the **init** method call inside the `handleLoginSuccess` method.
+
+      As you can see there are several different Platform Events which are available for your application to ensure a smooth user experience.
+
+  .step(data-file='index.js', data-highlight='70-100')
+    :markdown
+      ## init()
+
+      During the initialization of this demo app, all extensions within your RingCentral Sandbox account are retrieved recursively.
+
+      Since the RingCentral Platform Object returns a Promise, it makes authoring this recursive request pretty simple.
+
+  .step(data-file='index.js', data-highlight='101')
+    :markdown
+      ## What are Event Filters
+
+      [RingCentral JS SDK Server-Side Subscriptions](https://github.com/ringcentral/ringcentral-js#server-side-subscriptions) require the `subscription` application variable placeholder we created earlier to be provided with an **array** of [EventFilters]().
+
+  .step(data-file='index.js', data-highlight='110-121')
+    :markdown
+      ## Creating Event Filters
+
+      The `createEventFilter` function requires a parameter be provided which is the full list of our account extensions.
+
+      First we setup a private variable `_eventFilters` which type **array** (the data type required by the JS SDK for this property's value when we will later register the `subscription`).
+      Then we iterate over each extension in the list, cache the extension for reference while building the `eventFilters` array elements.
+      Lastly we leverage our environment variables to generate the **string** for each [Event Type]() respectively and append it to the `_eventFilters` variable.
+      Finally, once all the eventFilters have been added, we return the `_eventFilters` back to the Promise chain, which passes the array of **eventFilters** as an argument to the `startSubscription` function.
+
+      It is a best practice to provide [Multiple event filters in a single Subscription](https://github.com/ringcentral/ringcentral-js#stale-subscriptions). You can see in this code that we leverage our environment variables to include
+
+      It is recommended that developers using the JS SDK read the full [Subscriptions lifecycle](https://github.com/ringcentral/ringcentral-js#subscriptions-lifecycle).
+
+      **See Also**
+      * [Removing Subscriptions from server](https://github.com/ringcentral/ringcentral-js#updating-subsctiptions)
+      * [Updating Subscriptions](https://github.com/ringcentral/ringcentral-js#updating-subsctiptions)
+      * [Subscription reset](https://github.com/ringcentral/ringcentral-js#subscription-reset)
+      * [Subscriptions lifecycle](https://github.com/ringcentral/ringcentral-js#subscriptions-lifecycle)
+      * [Stale Subscriptions](https://github.com/ringcentral/ringcentral-js#stale-subscriptions)ep(data-file='index.js', data-highlight='')
+    :markdown
+      ## {{REPLACE}}
+
+  .step(data-file='index.js', data-highlight='102')
+    :markdown
+      ## Call Start Subscription
+
+  .step(data-file='index.js', data-highlight='40-67')
+    :markdown
+      ## Creating the Webhook
+
+  .step(data-file='index.js', data-highlight='224-235')
+    :markdown
+      ## Configuring Your WebServer
+
+  .step(data-file='index.js', data-highlight='237-253')
+    :markdown
+      ## Handling Requests
+
+  .step(data-file='index.js', data-highlight='255-261')
+    :markdown
+      ## Webhook Creation Response
+
+  .step(data-file='index.js', data-highlight='263-270')
+    :markdown
+      ## Handling Valid Webhooks
